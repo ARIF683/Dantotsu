@@ -18,7 +18,7 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v3
       with:
-        fetch-depth: 10
+        fetch-depth: 1
 
     - name: Get Last 10 Commits
       id: get_commits
@@ -43,10 +43,7 @@ jobs:
         distribution: 'temurin'
         java-version: 17
         cache: gradle
-
-    - name: Decode Keystore File
-      run: echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > $GITHUB_WORKSPACE/key.keystore
-
+        
     - name: List files in the directory
       run: ls -l
 
@@ -54,27 +51,18 @@ jobs:
       run: chmod +x ./gradlew
 
     - name: Build with Gradle
-      run: ./gradlew assembleAlpha -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/key.keystore -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+      run: ./gradlew assembleDebug
       
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v3.0.0
       with:
           name: Dantotsu
-          path: "app/build/outputs/apk/alpha/app-alpha.apk"
+          path: "app/build/outputs/apk/debug/app-debug.apk"
           
     - name: Upload APK to Discord
       shell: bash
       run: |
         commit_messages=$(echo "$COMMIT_LOG")
-        contentbody=$( jq -Rsa . <<< "Alpha-Build: <@719439449423085569> **${{ env.VERSION }}**\n\n$commit_messages" )
-        curl -F "payload_json={\"content\":${contentbody}}" -F "dantotsu_debug=@app/build/outputs/apk/alpha/app-alpha.apk" ${{ secrets.DISCORD_WEBHOOK }}
-
-    - name: Delete Old Pre-Releases
-      id: delete-pre-releases
-      uses: sgpublic/delete-release-action@master
-      with:
-        pre-release-drop: true
-        pre-release-keep-count: 3
-        pre-release-drop-tag: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        contentbody=$( jq -Rsa . <<< "Debug-Build: @everyone **${{ env.VERSION }}**\n\n$commit_messages" )
+        curl -F "payload_json={\"content\":${contentbody}}" -F "dantotsu_debug=@app/build/outputs/apk/debug/app-debug.apk" ${{ secrets.DISCORD_WEBHOOK }}
+        
